@@ -1,0 +1,1258 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Arena de Combate</title>
+  <style>
+    * {
+      box-sizing: border-box
+    }
+
+    :root {
+      --bg: #e8efff;
+      --card: #fff;
+      --tx: #17163a;
+      --mut: #62648a;
+      --ac: #ff4f87;
+      --bd: #17163a;
+      --sh: 5px 5px 0 rgba(23, 22, 58, .85);
+      color-scheme: light;
+      box-sizing: border-box;
+      padding-top: env(safe-area-inset-top, 0px);
+      padding-bottom: env(safe-area-inset-bottom, 0px)
+    }
+
+    @media (prefers-color-scheme:dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #15142b;
+        --card: #232149;
+        --tx: #f1f0ff;
+        --mut: #a3a2cf;
+        --bd: #8b88ff;
+        --sh: 5px 5px 0 rgba(0, 0, 0, .6);
+        color-scheme: dark
+      }
+    }
+
+    :root[data-theme="dark"] {
+      --bg: #15142b;
+      --card: #232149;
+      --tx: #f1f0ff;
+      --mut: #a3a2cf;
+      --bd: #8b88ff;
+      --sh: 5px 5px 0 rgba(0, 0, 0, .6);
+      color-scheme: dark
+    }
+
+    html {
+      scroll-padding-top: env(safe-area-inset-top, 0px)
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--tx);
+      font-family: "Avenir Next", "Nunito", "Segoe UI", system-ui, sans-serif;
+      min-height: 100vh
+    }
+
+    .wrap {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 14px
+    }
+
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.7rem;
+      letter-spacing: -.5px;
+      font-weight: 900
+    }
+
+    h2,
+    h3 {
+      margin: .2em 0
+    }
+
+    nav {
+      display: flex;
+      gap: 8px
+    }
+
+    body.fight nav {
+      display: none
+    }
+
+    .card {
+      background: var(--card);
+      border: 3px solid var(--bd);
+      border-radius: 18px;
+      box-shadow: var(--sh);
+      padding: 16px
+    }
+
+    .btn {
+      border: 3px solid var(--bd);
+      border-radius: 12px;
+      padding: 10px 16px;
+      font: inherit;
+      font-weight: 800;
+      background: var(--ac);
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 3px 3px 0 var(--bd);
+      transition: transform .15s, box-shadow .15s, background .2s
+    }
+
+    .btn:hover:not(:disabled) {
+      transform: translate(-1px, -1px);
+      box-shadow: 5px 5px 0 var(--bd)
+    }
+
+    .btn:active:not(:disabled) {
+      transform: translate(2px, 2px);
+      box-shadow: 1px 1px 0 var(--bd)
+    }
+
+    .btn:disabled {
+      opacity: .45;
+      cursor: not-allowed
+    }
+
+    .btn.alt {
+      background: var(--card);
+      color: var(--tx)
+    }
+
+    .btn.alt.on {
+      background: var(--tx);
+      color: var(--bg)
+    }
+
+    .btn:focus-visible,
+    .ch:focus-visible,
+    .mv:focus-visible,
+    input:focus-visible {
+      outline: 3px solid #ffc933;
+      outline-offset: 2px
+    }
+
+    .screen {
+      display: none
+    }
+
+    .screen.on {
+      display: block;
+      animation: in .3s
+    }
+
+    @keyframes in {
+      from {
+        opacity: 0;
+        transform: translateY(8px)
+      }
+    }
+
+    .two {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px
+    }
+
+    @media(max-width:700px) {
+      .two {
+        grid-template-columns: 1fr
+      }
+    }
+
+    label {
+      display: block;
+      font-weight: 800;
+      margin: 10px 0 4px
+    }
+
+    input[type=text],
+    input[type=password] {
+      width: 100%;
+      padding: 11px;
+      border-radius: 12px;
+      border: 3px solid var(--bd);
+      font: inherit;
+      background: var(--bg);
+      color: var(--tx)
+    }
+
+    input[type=file] {
+      width: 100%;
+      font: inherit;
+      color: var(--mut)
+    }
+
+    .prev {
+      width: 96px;
+      height: 96px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid var(--bd);
+      margin-top: 8px;
+      display: none
+    }
+
+    .muted {
+      color: var(--mut);
+      font-size: .9rem
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px
+    }
+
+    .ch {
+      position: relative;
+      border-color: var(--tc);
+      cursor: pointer;
+      transition: transform .2s
+    }
+
+    .ch:hover {
+      transform: translateY(-3px)
+    }
+
+    .ch.sel-p {
+      outline: 4px solid #2fbf71
+    }
+
+    .ch.sel-c {
+      outline: 4px solid #e8453c
+    }
+
+    .ch.sel-p::after,
+    .ch.sel-c::after {
+      position: absolute;
+      top: -12px;
+      left: 12px;
+      padding: 2px 10px;
+      border-radius: 99px;
+      color: #fff;
+      font-size: .75rem;
+      font-weight: 900
+    }
+
+    .ch.sel-p::after {
+      content: "JUGADOR";
+      background: #2fbf71
+    }
+
+    .ch.sel-c::after {
+      content: "CPU";
+      background: #e8453c
+    }
+
+    .row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 8px
+    }
+
+    .thumb {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 4px solid var(--tc);
+      flex: none
+    }
+
+    .chip {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 99px;
+      color: #fff;
+      background: var(--tc);
+      font-size: .78rem;
+      font-weight: 800;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, .35)
+    }
+
+    .st {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3px 10px;
+      font-size: .85rem;
+      font-weight: 700
+    }
+
+    .ml {
+      margin: 10px 0 0;
+      padding-left: 18px;
+      font-size: .82rem
+    }
+
+    .x {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      border: 0;
+      background: transparent;
+      color: var(--mut);
+      font-size: 1rem;
+      cursor: pointer
+    }
+
+    .bar-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px
+    }
+
+    .arena {
+      position: relative;
+      height: 380px;
+      border-radius: 20px;
+      overflow: hidden;
+      border: 3px solid var(--bd);
+      box-shadow: var(--sh);
+      background: linear-gradient(#7fc8ff, #d9f2ff 55%, #86cf67 55%, #58ad49)
+    }
+
+    .spr {
+      position: absolute;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 4px solid #fff;
+      box-shadow: 0 10px 18px rgba(0, 0, 0, .3);
+      transition: transform .25s, opacity .9s, filter .9s;
+      background: #fff
+    }
+
+    #se {
+      width: 120px;
+      height: 120px;
+      right: 9%;
+      top: 16%
+    }
+
+    #sp {
+      width: 150px;
+      height: 150px;
+      left: 8%;
+      bottom: 6%
+    }
+
+    .lunge-p {
+      transform: translate(60px, -40px)
+    }
+
+    .lunge-e {
+      transform: translate(-60px, 40px)
+    }
+
+    .hit {
+      animation: hit .4s
+    }
+
+    @keyframes hit {
+
+      0%,
+      100% {
+        transform: none;
+        filter: none
+      }
+
+      20% {
+        transform: translateX(-10px);
+        filter: brightness(2.2)
+      }
+
+      50% {
+        transform: translateX(10px);
+        filter: brightness(2.2)
+      }
+
+      80% {
+        transform: translateX(-5px)
+      }
+    }
+
+    .faint {
+      opacity: .15;
+      filter: grayscale(1);
+      transform: translateY(40px) scale(.7)
+    }
+
+    .info {
+      position: absolute;
+      background: rgba(255, 255, 255, .94);
+      color: #17163a;
+      border: 3px solid #17163a;
+      border-radius: 14px;
+      padding: 8px 12px;
+      width: min(220px, 46%);
+      font-size: .85rem;
+      box-shadow: 3px 3px 0 rgba(23, 22, 58, .8)
+    }
+
+    #ie {
+      left: 3%;
+      top: 5%
+    }
+
+    #ip {
+      right: 3%;
+      bottom: 6%
+    }
+
+    .bar {
+      height: 11px;
+      background: #d4d7ea;
+      border-radius: 6px;
+      overflow: hidden;
+      margin: 5px 0 2px
+    }
+
+    .bar i {
+      display: block;
+      height: 100%;
+      width: 100%;
+      background: #2fbf71;
+      transition: width .7s ease, background .4s
+    }
+
+    .fl {
+      position: absolute;
+      font-weight: 900;
+      font-size: 1.8rem;
+      color: #fff;
+      -webkit-text-stroke: 1px #17163a;
+      text-shadow: 0 2px 0 #17163a;
+      animation: fl 1s forwards;
+      pointer-events: none
+    }
+
+    @keyframes fl {
+      to {
+        transform: translateY(-55px);
+        opacity: 0
+      }
+    }
+
+    .log {
+      height: 112px;
+      overflow: auto;
+      margin: 14px 0;
+      padding: 10px 14px;
+      border-radius: 14px;
+      border: 3px solid var(--bd);
+      background: var(--card);
+      font-size: .92rem
+    }
+
+    .log p {
+      margin: 2px 0;
+      animation: in .25s
+    }
+
+    .moves {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px
+    }
+
+    .mv {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      text-align: left;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 3px solid var(--tc);
+      background: var(--card);
+      color: var(--tx);
+      font: inherit;
+      cursor: pointer;
+      transition: transform .15s, background .2s
+    }
+
+    .mv:hover:not(:disabled) {
+      transform: translateY(-2px);
+      background: var(--bg)
+    }
+
+    .mv:disabled {
+      opacity: .45;
+      cursor: wait
+    }
+
+    .mv small {
+      color: var(--mut)
+    }
+
+    .res {
+      text-align: center;
+      max-width: 560px;
+      margin: 0 auto
+    }
+
+    .res img {
+      width: 130px;
+      height: 130px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 5px solid var(--tc);
+      animation: pop .6s
+    }
+
+    @keyframes pop {
+      from {
+        transform: scale(.3) rotate(-20deg)
+      }
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 16px 0;
+      text-align: left
+    }
+
+    .stats div {
+      border: 3px solid var(--bd);
+      border-radius: 12px;
+      padding: 10px
+    }
+
+    .stats b {
+      display: block;
+      font-size: 1.25rem
+    }
+
+    @media(max-width:560px) {
+      .arena {
+        height: 340px
+      }
+
+      #se {
+        width: 96px;
+        height: 96px
+      }
+
+      #sp {
+        width: 116px;
+        height: 116px
+      }
+
+      .moves {
+        grid-template-columns: 1fr
+      }
+    }
+
+    [hidden] {
+      display: none !important
+    }
+
+    textarea {
+      width: 100%;
+      border: 3px solid var(--bd);
+      border-radius: 12px;
+      padding: 10px;
+      background: var(--card);
+      color: var(--tx);
+      font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace;
+      margin-bottom: 8px
+    }
+
+    .io {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 14px
+    }
+
+    .rchip {
+      background: var(--rc);
+      margin-left: 4px
+    }
+
+    .rc-uber {
+      background: linear-gradient(90deg, #ff2d6f, #ffb300, #2fbf71, #2f8cff, #a64dff)
+    }
+
+    .ch.rr-raro {
+      box-shadow: var(--sh), 0 0 10px var(--rc)
+    }
+
+    .ch.rr-mitico {
+      box-shadow: var(--sh), 0 0 16px var(--rc)
+    }
+
+    .ch.rr-legendario {
+      box-shadow: var(--sh), 0 0 24px var(--rc)
+    }
+
+    .ch.rr-uber {
+      animation: uber 3s linear infinite
+    }
+
+    @keyframes uber {
+
+      0%,
+      100% {
+        box-shadow: var(--sh), 0 0 26px #ff2d6f
+      }
+
+      25% {
+        box-shadow: var(--sh), 0 0 26px #ffb300
+      }
+
+      50% {
+        box-shadow: var(--sh), 0 0 26px #2fbf71
+      }
+
+      75% {
+        box-shadow: var(--sh), 0 0 26px #2f8cff
+      }
+    }
+
+    .spr.dodge {
+      animation: dodge .7s ease-in-out;
+      z-index: 2
+    }
+
+    @keyframes dodge {
+      0% {
+        transform: none
+      }
+
+      30%,
+      65% {
+        transform: translateY(-48px) rotate(var(--dr, -12deg)) scale(.92);
+        filter: brightness(1.25) saturate(1.3)
+      }
+
+      100% {
+        transform: none
+      }
+    }
+
+    .ghost {
+      pointer-events: none;
+      z-index: 0;
+      filter: blur(1.5px) hue-rotate(40deg);
+      animation: ghost .7s forwards
+    }
+
+    @keyframes ghost {
+      from {
+        opacity: .55;
+        transform: scale(1)
+      }
+
+      to {
+        opacity: 0;
+        transform: scale(1.18)
+      }
+    }
+
+    .fl.dg {
+      color: #bfe9ff
+    }
+
+    /* NUEVO: botón de Favorito en las tarjetas */
+    .favb {
+      position: absolute;
+      top: 5px;
+      right: 34px;
+      border: 0;
+      background: transparent;
+      color: var(--mut);
+      font-size: 1.2rem;
+      line-height: 1;
+      padding: 2px;
+      cursor: pointer
+    }
+
+    .favb.on {
+      color: #f0a500
+    }
+
+    /* NUEVO: modal de Fusión */
+    dialog.fus {
+      width: calc(100% - 24px);
+      max-width: 760px;
+      max-height: 90vh;
+      overflow: auto;
+      background: var(--card);
+      color: var(--tx);
+      border: 3px solid var(--bd);
+      border-radius: 18px;
+      box-shadow: var(--sh);
+      padding: 16px
+    }
+
+    dialog.fus::backdrop {
+      background: rgba(10, 10, 30, .6)
+    }
+
+    .fgrid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 10px;
+      margin: 8px 0 14px
+    }
+
+    .fi {
+      position: relative;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      text-align: left;
+      padding: 8px;
+      border: 3px solid var(--tc);
+      border-radius: 14px;
+      background: var(--card);
+      color: var(--tx);
+      font: inherit;
+      font-size: .85rem;
+      cursor: pointer
+    }
+
+    .fi img {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      object-fit: cover;
+      flex: none
+    }
+
+    .fi small {
+      display: block;
+      color: var(--mut)
+    }
+
+    .fi.on {
+      outline: 4px solid #2fbf71;
+      background: var(--bg)
+    }
+
+    .fi:disabled {
+      opacity: .45;
+      cursor: not-allowed
+    }
+
+    .fi .lk {
+      position: absolute;
+      top: 4px;
+      right: 6px
+    }
+
+    .fi:focus-visible,
+    .favb:focus-visible {
+      outline: 3px solid #ffc933;
+      outline-offset: 2px
+    }
+
+    @media(prefers-reduced-motion:reduce) {
+      * {
+        animation: none !important;
+        transition: none !important
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header>
+      <h1>⚔️ Arena de Combate</h1>
+      <nav><button class="btn alt" data-s="create">Crear luchador</button><button class="btn alt"
+          data-s="select">Luchadores <span id="cnt">0</span></button></nav>
+    </header>
+
+    <section id="create" class="screen on">
+      <div class="two">
+        <form id="form" class="card">
+          <h2>Nuevo luchador</h2>
+          <label for="name">Nombre</label>
+          <input id="name" type="text" maxlength="18" placeholder="Ej. Felipe" required>
+          <label for="file">Foto o imagen</label>
+          <input id="file" type="file" accept="image/*">
+          <img id="prev" class="prev" alt="Vista previa">
+          <p class="muted">Sin imagen se genera un avatar automático. La IA analiza el nombre y los colores de la imagen
+            para definir tipo, estadísticas y ataques.</p>
+          <button id="mk" class="btn" type="submit">Crear personaje</button>
+          <button id="mkleg" class="btn" type="button" style="display:none">⭐ Crear legendario (recompensa)</button>
+          <button id="demo" class="btn alt" type="button">Crear 3 de prueba (usa cupo)</button>
+          <p id="status" class="muted" role="status"></p>
+          <p id="quota" class="muted"></p>
+          <p id="odds" class="muted"></p>
+          <button id="rw" class="btn alt" type="button">🎁 Recompensa</button>
+          <div id="rwbox" style="display:none">
+            <label for="rwpw">Contraseña de recompensa</label>
+            <input id="rwpw" type="password" autocomplete="off">
+            <button id="rwok" class="btn" type="button" style="margin-top:8px">Canjear</button>
+            <p id="rwmsg" class="muted" role="status"></p>
+          </div>
+        </form>
+        <div id="fiche" class="card">
+          <h2>Ficha del luchador</h2>
+          <p class="muted">Aquí aparecerá el personaje generado con sus 4 ataques.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="select" class="screen">
+      <div class="bar-row">
+        <div>
+          <h2>Elige tu combate</h2><span id="slots" class="muted"></span>
+        </div>
+        <button id="go" class="btn" disabled>¡A Luchar!</button>
+      </div>
+      <div class="io">
+        <button id="exp" class="btn alt" type="button">⬇️ Exportar JSON</button>
+        <button id="impb" class="btn alt" type="button">⬆️ Importar JSON</button>
+        <input id="imp" type="file" accept=".json,application/json" hidden>
+        <!-- NUEVO: abre el modal de fusión -->
+        <button id="fusb" class="btn alt" type="button">🧬 Fusionar</button>
+        <span id="iostat" class="muted" role="status"></span>
+      </div>
+      <div id="iopanel" style="display:none">
+        <textarea id="iobox" rows="5" aria-label="JSON de luchadores"></textarea>
+        <button id="impt" class="btn alt" type="button">Importar este texto</button>
+      </div>
+      <div id="grid" class="grid"></div>
+    </section>
+
+    <section id="battle" class="screen">
+      <div class="arena" id="arena">
+        <img id="se" class="spr" alt="Oponente"><img id="sp" class="spr" alt="Jugador">
+        <div class="info" id="ie"></div>
+        <div class="info" id="ip"></div>
+      </div>
+      <div class="log" id="log" aria-live="polite"></div>
+      <div class="moves" id="menu"></div>
+    </section>
+
+    <section id="result" class="screen">
+      <div class="card res" id="res"></div>
+    </section>
+
+    <!-- NUEVO: modal de Fusión (1 base + 3 materiales de la misma rareza) -->
+    <dialog id="fus" class="fus" aria-labelledby="fusT">
+      <div class="bar-row">
+        <h2 id="fusT">🧬 Fusión de luchadores</h2>
+        <button id="fusX" class="btn alt" type="button" aria-label="Cerrar">✕</button>
+      </div>
+      <p class="muted">Elige 1 luchador base y 3 materiales de su misma rareza. El base sube 1 nivel de rareza y sus
+        estadísticas se recalculan. Los materiales se consumen para siempre. Los favoritos ⭐ no se pueden usar como
+        material.</p>
+      <h3>1. Luchador base</h3>
+      <div id="fusBase" class="fgrid"></div>
+      <h3>2. Materiales <span id="fusN" class="muted"></span></h3>
+      <div id="fusMat" class="fgrid"></div>
+      <div id="fusPrev"></div>
+      <div class="bar-row" style="margin:14px 0 0">
+        <span id="fusMsg" class="muted" role="status"></span>
+        <button id="fusOk" class="btn" type="button" disabled>Confirmar fusión</button>
+      </div>
+    </dialog>
+  </div>
+
+  <script>
+    const $ = s => document.querySelector(s), sleep = ms => new Promise(r => setTimeout(r, ms));
+    const esc = s => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const hash = s => { let h = 2166136261; for (const c of s) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return h >>> 0 };
+    const rng = a => () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296 };
+    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+    /* ---------- Datos ---------- */
+    const TYPES = {
+      Fuego: { c: '#e8552f', e: '🔥', s: ['Planta', 'Hielo'], b: [0, 15, -10, 5] },
+      Agua: { c: '#2f7fe0', e: '💧', s: ['Fuego'], b: [15, 0, 5, -10] },
+      Planta: { c: '#2f9e5a', e: '🌿', s: ['Agua'], b: [10, -5, 15, -10] },
+      'Eléctrico': { c: '#d9a50c', e: '⚡', s: ['Agua'], b: [-10, 5, -5, 20] },
+      Siniestro: { c: '#5b4b78', e: '🌑', s: ['Psíquico'], b: [-5, 15, -10, 10] },
+      Hielo: { c: '#2aa9bf', e: '❄️', s: ['Planta'], b: [5, -5, 15, -5] },
+      'Psíquico': { c: '#b24cc4', e: '🔮', s: ['Siniestro', 'Normal'], b: [-5, 10, -5, 10] },
+      Normal: { c: '#8d8d7c', e: '⭐', s: [], b: [5, 5, 5, 5] }
+    };
+    const MV = {
+      Fuego: ['Llamarada', 'Ascuas', 'Furia Ígnea', 'Colmillo Fuego', 'Erupción', 'Aliento Ardiente'],
+      Agua: ['Hidrobomba', 'Marea Brava', 'Chorro Burbuja', 'Cascada', 'Surf Furioso', 'Torrente'],
+      Planta: ['Latigazo', 'Hoja Navaja', 'Espora Venenosa', 'Rayo Solar', 'Enredadera', 'Tormenta Floral'],
+      'Eléctrico': ['Rayo Trueno', 'Chispazo', 'Descarga Voltio', 'Puño Trueno', 'Onda Estática', 'Tormenta Eléctrica'],
+      Siniestro: ['Mordisco Umbrío', 'Golpe Bajo', 'Garra Nocturna', 'Eclipse', 'Pesadilla', 'Emboscada'],
+      Hielo: ['Ventisca', 'Rayo Gélido', 'Carámbano', 'Aliento Polar', 'Avalancha', 'Cristal Cortante'],
+      'Psíquico': ['Mirada Hipnótica', 'Psicorrayo', 'Onda Mental', 'Telekinesis', 'Pulso Astral', 'Confusión'],
+      Normal: ['Placaje Épico', 'Golpe Cuerpo', 'Furia Salvaje', 'Ataque Rápido', 'Hiperrayo', 'Pisotón']
+    };
+    const GEN = ['Embestida', 'Mirada Fija', 'Golpe Furia', 'Grito Salvaje', 'Placaje Veloz'];
+    const EFX = { puro: 'Daño puro', crit: 'Alta prob. de crítico', def: 'Baja la defensa', cura: 'Absorbe vida' };
+    /* Rarezas: w=probabilidad %, b=bono a estadísticas, pw=bono de poder, ac=bono de precisión, tm=ataques del tipo propio (el resto es genérico) */
+    const RAR = {
+      normal: { l: 'Normal', c: '#8d8d7c', s: '●', w: 60, b: 0, pw: 0, ac: 0, tm: 3 },
+      raro: { l: 'Raro', c: '#2f8cff', s: '◆', w: 25, b: 5, pw: 6, ac: 2, tm: 3 },
+      mitico: { l: 'Mítico', c: '#a64dff', s: '✦', w: 10, b: 12, pw: 14, ac: 4, tm: 4 },
+      legendario: { l: 'Legendario', c: '#f0a500', s: '★', w: 4, b: 20, pw: 24, ac: 6, tm: 4 },
+      uber: { l: 'Uber', c: '#ff2d6f', s: '✪', w: 1, b: 30, pw: 36, ac: 8, tm: 4 }
+    };
+    const rollRar = () => { let r = Math.random() * 100; for (const k in RAR) { if ((r -= RAR[k].w) < 0) return k } return 'normal' };
+    /* NUEVO: escala de rarezas para la fusión (Normal → Raro → Mítico → Legendario → Uber) */
+    const RK = Object.keys(RAR), nextRar = k => RK[RK.indexOf(k) + 1] || null;
+    /* NUEVO: favoritos siempre primero, conservando el orden original del resto */
+    const favFirst = list => [...list].sort((a, b) => !!b.fav - !!a.fav);
+
+    /* ---------- Almacenamiento ---------- */
+    let chars = [], sel = { p: null, c: null }, B = null;
+    try { chars = JSON.parse(localStorage.getItem('arena_chars') || '[]') } catch (e) { chars = [] }
+    const save = () => { try { localStorage.setItem('arena_chars', JSON.stringify(chars)) } catch (e) { } };
+    if (!Array.isArray(chars)) chars = [];
+    chars.forEach(c => { if (!RAR[c.rar]) c.rar = 'normal'; c.fav = !!c.fav }); /* NUEVO: campo fav (favorito) */
+    const newId = () => Date.now() + Math.random().toString(36).slice(2, 6);
+    /* Cupo diario: 30 luchadores por día, no acumulable (se reinicia cada día) */
+    const LIMIT = 30;
+    const today = () => { const d = new Date(); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}` };
+    let daily = { day: '', used: 0, reward: 0 }; /* reward: 0 sin canjear · 1 disponible · 2 usada */
+    try { const d = JSON.parse(localStorage.getItem('arena_daily') || 'null'); if (d && typeof d === 'object') daily = { day: String(d.day || ''), used: clamp(+d.used || 0, 0, LIMIT), reward: [0, 1, 2].includes(+d.reward) ? +d.reward : 0 } } catch (e) { }
+    const saveDaily = () => { try { localStorage.setItem('arena_daily', JSON.stringify(daily)) } catch (e) { } };
+    const dly = () => { if (daily.day !== today()) { daily = { day: today(), used: 0, reward: 0 }; saveDaily() } return daily };
+    const left = () => Math.max(0, LIMIT - dly().used);
+
+    /* ---------- IA simulada: analiza nombre + imagen ---------- */
+    const loadImg = src => new Promise((ok, ko) => { const i = new Image(); i.onload = () => ok(i); i.onerror = ko; i.src = src });
+    function square(img, size) { const c = document.createElement('canvas'); c.width = c.height = size; const s = Math.min(img.width, img.height); c.getContext('2d').drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, size, size); return c }
+    function avatar(name, hue) {
+      const c = document.createElement('canvas'); c.width = c.height = 160; const x = c.getContext('2d');
+      const g = x.createLinearGradient(0, 0, 160, 160); g.addColorStop(0, `hsl(${hue},75%,60%)`); g.addColorStop(1, `hsl(${(hue + 40) % 360},70%,32%)`);
+      x.fillStyle = g; x.fillRect(0, 0, 160, 160); x.fillStyle = 'rgba(255,255,255,.92)'; x.font = 'bold 88px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(name[0].toUpperCase(), 80, 88);
+      return c.toDataURL('image/jpeg', .85)
+    }
+    function pickType(h, s, l, r) {
+      if (l < .22) return 'Siniestro';
+      if (s < .18) return l > .78 ? 'Hielo' : ['Normal', 'Psíquico', 'Siniestro'][Math.floor(r * 3)];
+      if (h < 40 || h >= 340) return 'Fuego'; if (h < 70) return 'Eléctrico'; if (h < 170) return 'Planta';
+      if (h < 200) return l > .6 ? 'Hielo' : 'Agua'; if (h < 255) return 'Agua'; return 'Psíquico'
+    }
+    async function analyze(name, url, fast, rar) {
+      rar = RAR[rar] ? rar : rollRar(); const R = RAR[rar];
+      await sleep(fast ? 200 : 1800);
+      const img = await loadImg(url), d = square(img, 16).getContext('2d').getImageData(0, 0, 16, 16).data;
+      let r = 0, g = 0, b = 0; for (let i = 0; i < d.length; i += 4) { r += d[i]; g += d[i + 1]; b += d[i + 2] }
+      const n = d.length / 4; r /= n * 255; g /= n * 255; b /= n * 255;
+      const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, dl = mx - mn; let h = 0, s = 0;
+      if (dl) { s = dl / (1 - Math.abs(2 * l - 1)); h = mx == r ? ((g - b) / dl) % 6 : mx == g ? (b - r) / dl + 2 : (r - g) / dl + 4; h = (h * 60 + 360) % 360 }
+      const rnd = rng(hash(name + Math.round(r * 255) + Math.round(g * 255) + Math.round(b * 255)));
+      const type = pickType(h, s, l, rnd()), bias = TYPES[type].b;
+      const [hp, atk, def, spd] = bias.map(x => clamp(Math.round(30 + rnd() * 50 + x), 10, 100) + R.b);
+      const shuf = a => a.map(v => [rnd(), v]).sort((x, y) => x[0] - y[0]).map(x => x[1]);
+      const names = [...shuf(MV[type]).slice(0, R.tm), ...(R.tm < 4 ? [shuf(GEN)[0]] : [])], efx = shuf(Object.keys(EFX));
+      const moves = names.map((nm, i) => {
+        const p0 = 40 + Math.floor(rnd() * 81);
+        return { n: nm, p: p0 + R.pw, a: clamp(Math.round(100 - (p0 - 40) * .3 + rnd() * 10 - 5) + R.ac, 70, 100), e: efx[i], t: i < R.tm ? type : 'Normal' }
+      });
+      return { id: newId(), name, img: url, type, hp, atk, def, spd, rar, moves }
+    }
+
+    /* ---------- Interfaz ---------- */
+    function show(id) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id));
+      document.querySelectorAll('nav .btn').forEach(b => b.classList.toggle('on', b.dataset.s === id));
+      document.body.classList.toggle('fight', id === 'battle' || id === 'result');
+      if (id === 'select') renderSel(); if (id === 'create') refreshQuota(); window.scrollTo(0, 0)
+    }
+    document.querySelectorAll('nav .btn').forEach(b => b.onclick = () => show(b.dataset.s));
+    const rchip = c => { const r = RAR[c.rar] || RAR.normal; return `<span class="chip rchip rc-${c.rar}" style="--rc:${r.c}" title="Rareza">${r.s} ${r.l}</span>` };
+    const card = (c, o = {}) => {
+      const t = TYPES[c.type], r = RAR[c.rar] || RAR.normal; return `<div class="ch card rr-${c.rar}${sel.p === c.id ? ' sel-p' : ''}${sel.c === c.id ? ' sel-c' : ''}" data-id="${c.id}" style="--tc:${t.c};--rc:${r.c}" ${o.pick ? 'tabindex="0"' : ''}>
+ ${o.pick ? `<button class="favb${c.fav ? ' on' : ''}" data-fav aria-pressed="${!!c.fav}" title="${c.fav ? 'Quitar de favoritos' : 'Marcar como favorito'}" aria-label="Favorito">${c.fav ? '★' : '☆'}</button><button class="x" data-del title="Eliminar" aria-label="Eliminar">✕</button>` : ''}
+ <div class="row"><img class="thumb" src="${c.img}" alt=""><div><b>${esc(c.name)}</b><br><span class="chip">${t.e} ${c.type}</span>${rchip(c)}</div></div>
+ <div class="st"><span>❤️ HP ${c.hp}</span><span>⚔️ Ataque ${c.atk}</span><span>🛡️ Defensa ${c.def}</span><span>💨 Velocidad ${c.spd}</span></div>
+ ${o.full ? `<ul class="ml">${c.moves.map(m => `<li><b>${m.n}</b> (${m.t})<br><small>Poder ${m.p} · Precisión ${m.a}% · ${EFX[m.e]}</small></li>`).join('')}</ul>` : ''}</div>`
+    };
+
+    $('#file').onchange = e => { const f = e.target.files[0], p = $('#prev'); if (f) { p.src = URL.createObjectURL(f); p.style.display = 'block' } else p.style.display = 'none' };
+    const fileUrl = f => new Promise((ok, ko) => { const r = new FileReader(); r.onload = async () => { try { ok(square(await loadImg(r.result), 160).toDataURL('image/jpeg', .82)) } catch (e) { ko(e) } }; r.onerror = ko; r.readAsDataURL(f) });
+
+    let busy = false;
+    async function create(name, url, fast, rar) {
+      const c = await analyze(name, url, fast, rar); chars.push(c); save(); $('#cnt').textContent = chars.length; return c
+    }
+    async function makeFromForm(forced) {
+      if (busy) return;
+      const name = $('#name').value.trim(), st = $('#status');
+      if (!name) { st.textContent = 'Escribe un nombre para tu luchador.'; $('#name').focus(); return }
+      if (forced ? dly().reward !== 1 : left() < 1) { st.textContent = forced ? 'La recompensa no está disponible.' : 'Ya creaste tus 3 luchadores de hoy. ¡Vuelve mañana!'; refreshQuota(); return }
+      busy = true; refreshQuota();
+      const msgs = ['🔍 Analizando imagen…', '🧬 Calculando estadísticas…', '⚔️ Forjando ataques…']; let i = 0; st.textContent = msgs[0];
+      const iv = setInterval(() => st.textContent = msgs[++i % 3], 550);
+      try {
+        const f = $('#file').files[0], url = f ? await fileUrl(f) : avatar(name, hash(name) % 360);
+        const c = await create(name, url, false, forced);
+        if (forced) dly().reward = 2; else dly().used++; saveDaily();
+        const R = RAR[c.rar];
+        $('#fiche').innerHTML = `<h2>¡${esc(c.name)} está listo!</h2>${c.rar !== 'normal' ? `<p><b>${R.s} ¡Rareza ${R.l}!</b></p>` : ''}${card(c, { full: true })}<button class="btn" id="tosel" style="margin-top:12px">Ir a luchar</button>`;
+        $('#tosel').onclick = () => show('select'); $('#form').reset(); $('#prev').style.display = 'none'; st.textContent = '';
+      } catch (err) { st.textContent = 'No se pudo leer la imagen. Prueba con otra (JPG o PNG).' }
+      clearInterval(iv); busy = false; refreshQuota()
+    }
+    $('#form').onsubmit = e => { e.preventDefault(); makeFromForm() };
+    $('#mkleg').onclick = () => makeFromForm('legendario');
+    $('#demo').onclick = async () => {
+      if (busy) return; busy = true; refreshQuota();
+      const n = Math.min(left(), 3);
+      for (const [nm, h] of [['Pyra', 12], ['Aqualis', 212], ['Floria', 130]].slice(0, n)) { await create(nm, avatar(nm, h), true); dly().used++; saveDaily() }
+      busy = false; refreshQuota(); show('select')
+    };
+
+    function renderSel() {
+      $('#cnt').textContent = chars.length;
+      $('#grid').innerHTML = chars.length ? favFirst(chars).map(c => card(c, { pick: 1 })).join('') /* NUEVO: favoritos primero */ : '<div class="card"><b>Aún no hay luchadores.</b><p class="muted">Crea uno desde “Crear luchador” o genera 3 de prueba.</p></div>';
+      const P = chars.find(c => c.id === sel.p), E = chars.find(c => c.id === sel.c);
+      $('#slots').textContent = !P ? 'Toca a tu luchador (Jugador 1).' : !E ? `Tú: ${P.name}. Ahora elige al oponente (CPU).` : `${P.name} vs ${E.name}`;
+      $('#go').disabled = !(P && E)
+    }
+    $('#grid').onclick = e => {
+      const el = e.target.closest('.ch'); if (!el) return; const id = el.dataset.id;
+      /* NUEVO: marcar/desmarcar favorito (se guarda en localStorage) */
+      if (e.target.closest('[data-fav]')) { const c = chars.find(x => x.id === id); if (c) { c.fav = !c.fav; save() } renderSel(); return }
+      if (e.target.closest('[data-del]')) { const c = chars.find(x => x.id === id); if (c && c.fav && !confirm(`${c.name} es favorito. ¿Eliminarlo de todos modos?`)) return; chars = chars.filter(c => c.id !== id); if (sel.p === id) sel.p = null; if (sel.c === id) sel.c = null; save(); renderSel(); return }
+      if (sel.p === id) sel.p = null; else if (sel.c === id) sel.c = null; else if (!sel.p) sel.p = id; else sel.c = id; renderSel()
+    };
+    $('#grid').onkeydown = e => { if (e.key === 'Enter' && e.target.classList.contains('ch')) e.target.click() };
+    $('#go').onclick = startBattle;
+
+    /* ---------- Combate ---------- */
+    const eff = (mt, dt) => TYPES[mt].s.includes(dt) ? 1.5 : TYPES[dt].s.includes(mt) ? .75 : 1;
+    const say = t => { const l = $('#log'), p = document.createElement('p'); p.textContent = t; l.appendChild(p); l.scrollTop = l.scrollHeight };
+    const fighter = c => { const m = c.hp * 2 + 60; return { c, max: m, hp: m, dm: 1, dealt: 0 } };
+    function infoBox(k) { const f = B[k], t = TYPES[f.c.type]; return `<b>${esc(f.c.name)}</b> <span class="chip" style="--tc:${t.c}">${t.e} ${f.c.type}</span>${rchip(f.c)}<div class="bar"><i id="b${k}"></i></div><small id="t${k}"></small>` }
+    function upd() {
+      for (const k of ['p', 'e']) {
+        const f = B[k], pc = f.hp / f.max * 100, i = $('#b' + k);
+        i.style.width = pc + '%'; i.style.background = pc > 50 ? '#2fbf71' : pc > 20 ? '#f0b429' : '#e8453c'; $('#t' + k).textContent = `HP ${f.hp} / ${f.max}`
+      }
+    }
+    function startBattle() {
+      const P = chars.find(c => c.id === sel.p), E = chars.find(c => c.id === sel.c); if (!P || !E) return;
+      B = { p: fighter(P), e: fighter(E), turns: 0, best: null, over: false, busy: false };
+      $('#sp').src = P.img; $('#se').src = E.img; $('#sp').className = 'spr'; $('#se').className = 'spr';
+      $('#ip').innerHTML = infoBox('p'); $('#ie').innerHTML = infoBox('e'); upd(); $('#log').innerHTML = '';
+      $('#menu').innerHTML = P.moves.map((m, i) => `<button class="mv" data-i="${i}" style="--tc:${TYPES[m.t].c}"><b>${m.n}</b><small>${TYPES[m.t].e} ${m.t} · Poder ${m.p} · Precisión ${m.a}%</small><small>${EFX[m.e]}</small></button>`).join('');
+      show('battle'); say(`¡${E.name} (${E.type}) quiere luchar contra ${P.name}!`);
+      say(P.spd > E.spd ? `${P.name} es más veloz y atacará primero.` : P.spd < E.spd ? `${E.name} es más veloz y atacará primero.` : 'Velocidades iguales: el orden se decide al azar.')
+    }
+    $('#menu').onclick = e => { const b = e.target.closest('.mv'); if (b && !B.busy && !B.over) turn(+b.dataset.i) };
+    const lock = v => document.querySelectorAll('.mv').forEach(b => b.disabled = v);
+    function cpuPick() {
+      const a = B.e, d = B.p.c, ms = a.c.moves; if (Math.random() < .3) return ms[Math.random() * 4 | 0];
+      return ms.map(m => [m.p * m.a * eff(m.t, d.type) * (m.t == a.c.type ? 1.2 : 1), m]).sort((x, y) => y[0] - x[0])[0][1]
+    }
+    async function turn(i) {
+      B.busy = true; lock(true); B.turns++; say(`— Turno ${B.turns} —`);
+      const pm = B.p.c.moves[i], em = cpuPick(), ps = B.p.c.spd, es = B.e.c.spd;
+      const order = ps > es || (ps == es && Math.random() < .5) ? ['p', 'e'] : ['e', 'p'];
+      for (const k of order) { if (B.over) break; await act(k, k == 'p' ? pm : em); await sleep(350) }
+      if (!B.over) { B.busy = false; lock(false) }
+    }
+    function float(el, txt, cls = '') {
+      const f = document.createElement('div'); f.className = 'fl ' + cls; f.textContent = txt;
+      f.style.left = el.offsetLeft + el.offsetWidth / 2 - 20 + 'px'; f.style.top = el.offsetTop + 'px'; $('#arena').appendChild(f); setTimeout(() => f.remove(), 1000)
+    }
+    async function dodge(sd, o) {
+      const g = sd.cloneNode(); g.removeAttribute('id'); g.className = 'spr ghost'; g.alt = ''; g.setAttribute('aria-hidden', 'true');
+      g.style.left = sd.offsetLeft + 'px'; g.style.top = sd.offsetTop + 'px'; g.style.width = sd.offsetWidth + 'px'; g.style.height = sd.offsetHeight + 'px';
+      sd.parentNode.insertBefore(g, sd);
+      sd.style.setProperty('--dr', o == 'p' ? '-12deg' : '12deg');
+      sd.classList.add('dodge'); float(sd, '¡Esquivó!', 'dg');
+      await sleep(700); sd.classList.remove('dodge'); g.remove()
+    }
+    async function act(k, m) {
+      const o = k == 'p' ? 'e' : 'p', a = B[k], d = B[o], sa = $('#s' + k), sd = $('#s' + o);
+      say(`${a.c.name} usó ${m.n}.`);
+      sa.classList.add('lunge-' + k); await sleep(300); sa.classList.remove('lunge-' + k);
+      if (Math.random() * 100 > m.a) { say(`¡${d.c.name} esquivó el ataque!`); await dodge(sd, o); return }
+      const crit = Math.random() < (m.e == 'crit' ? .3 : .07), e = eff(m.t, d.c.type);
+      /* Daño = Poder × (Ataque / Defensa) × 0.35 × aleatorio ±15% × bonos */
+      let dmg = m.p * (a.c.atk / (d.c.def * d.dm)) * .35 * (.85 + Math.random() * .3) * (m.t == a.c.type ? 1.2 : 1) * e * (crit ? 1.5 : 1);
+      dmg = Math.max(1, Math.round(dmg)); d.hp = Math.max(0, d.hp - dmg); a.dealt += dmg;
+      if (!B.best || dmg > B.best.d) B.best = { d: dmg, n: m.n, by: a.c.name };
+      sd.classList.add('hit'); float(sd, '-' + dmg);
+      if (m.e == 'cura') { const h = Math.round(dmg * .3); a.hp = Math.min(a.max, a.hp + h); say(`${a.c.name} absorbió ${h} HP.`) }
+      upd(); say(`${d.c.name} recibió ${dmg} de daño.`);
+      if (crit) say('¡Es un golpe crítico!'); if (e > 1) say('¡Es muy eficaz!'); if (e < 1) say('No es muy eficaz…');
+      await sleep(500); sd.classList.remove('hit');
+      if (d.hp > 0) { if (m.e == 'def' && d.dm > .5 && Math.random() < .5) { d.dm *= .85; say(`¡La defensa de ${d.c.name} bajó!`) } }
+      else { B.over = true; sd.classList.add('faint'); say(`¡${d.c.name} se debilitó!`); await sleep(1200); finish(k) }
+    }
+    function finish(k) {
+      const w = B[k], l = B[k == 'p' ? 'e' : 'p'], t = TYPES[w.c.type], win = k == 'p', b = B.best;
+      $('#res').style.setProperty('--tc', t.c);
+      $('#res').innerHTML = `<h2>${win ? '🏆 ¡Victoria!' : '💀 Derrota'}</h2><img src="${w.c.img}" alt=""><h3>${esc(w.c.name)} gana el combate</h3>
+ <div class="stats"><div>Turnos<b>${B.turns}</b></div><div>HP restante del ganador<b>${w.hp} / ${w.max}</b></div>
+ <div>Daño de ${esc(B.p.c.name)}<b>${B.p.dealt}</b></div><div>Daño de ${esc(B.e.c.name)}<b>${B.e.dealt}</b></div>
+ <div style="grid-column:1/-1">Ataque más devastador<b>${b ? `${esc(b.n)} · ${b.d} de daño (${esc(b.by)})` : '—'}</b></div></div>
+ <button class="btn" id="again">Revancha</button> <button class="btn alt" id="menuBtn">Volver al Menú Principal</button>`;
+      $('#again').onclick = startBattle; $('#menuBtn').onclick = () => show('select'); show('result')
+    }
+    /* ---------- Cupo y recompensa ---------- */
+    function refreshQuota() {
+      const d = dly(), l = left();
+      $('#quota').textContent = `Hoy puedes crear ${l} de ${LIMIT} luchadores${d.reward === 1 ? ' (+1 legendario de recompensa)' : ''}. El cupo no se acumula: se reinicia cada día.`;
+      $('#mk').disabled = busy || l < 1; $('#demo').disabled = busy || l < 1;
+      $('#mkleg').style.display = d.reward === 1 ? '' : 'none'; $('#mkleg').disabled = busy;
+      const rw = $('#rw'); rw.disabled = d.reward !== 0;
+      rw.textContent = d.reward === 0 ? '🎁 Recompensa' : d.reward === 1 ? '🎁 Recompensa canjeada' : '🎁 Recompensa usada hoy';
+      if (d.reward !== 0) $('#rwbox').style.display = 'none'
+    }
+    $('#odds').textContent = 'Rareza al azar: ' + Object.values(RAR).map(r => `${r.s} ${r.l} ${r.w}%`).join(' · ') + '. Más rareza = mejores estadísticas y ataques.';
+    $('#rw').onclick = () => { const b = $('#rwbox'), open = b.style.display === 'none'; b.style.display = open ? 'block' : 'none'; if (open) $('#rwpw').focus() };
+    function redeem() {
+      const d = dly(), m = $('#rwmsg'); if (d.reward !== 0) return;
+      if (hash($('#rwpw').value) !== 2129257475) { m.textContent = 'Contraseña incorrecta.'; return }
+      d.reward = 1; saveDaily(); $('#rwpw').value = ''; m.textContent = ''; refreshQuota();
+      $('#status').textContent = '🎁 ¡Recompensa activada! Hoy puedes crear 1 luchador legendario extra.'
+    }
+    $('#rwok').onclick = redeem;
+    $('#rwpw').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); redeem() } };
+
+    /* ---------- Exportar / importar JSON ---------- */
+    let dl = null;
+    (async () => { try { dl = window.claude ? await window.claude.use('downloads') : null } catch (e) { dl = null } })();
+    const ioMsg = t => { $('#iostat').textContent = t };
+    async function exportJson() {
+      if (!chars.length) return ioMsg('No tienes luchadores para exportar.');
+      const json = JSON.stringify({ app: 'arena-de-combate', version: 2, exportado: new Date().toISOString(), luchadores: chars }, null, 1);
+      if (dl) { try { await dl.save({ filename: 'luchadores-arena.json', data: json }); return ioMsg('Archivo listo ✔') } catch (e) { if (e && e.code === 'declined') return ioMsg('Descarga cancelada.') } }
+      $('#iobox').value = json; $('#iopanel').style.display = 'block';
+      ioMsg('No se pudo descargar: copia el texto de abajo y guárdalo en un archivo .json.')
+    }
+    function cleanChar(o) {
+      if (!o || typeof o !== 'object') return null;
+      const name = typeof o.name === 'string' ? o.name.replace(/[<>&"'`]/g, '').trim().slice(0, 18) : '';
+      if (!name || !TYPES[o.type] || typeof o.img !== 'string' || o.img.length > 600000 || !/^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(o.img)) return null;
+      if (!Array.isArray(o.moves) || o.moves.length !== 4) return null;
+      const n = (v, lo, hi) => clamp(Math.round(+v) || lo, lo, hi), moves = [];
+      for (const m of o.moves) {
+        if (!m || typeof m.n !== 'string' || !TYPES[m.t] || !EFX[m.e]) return null;
+        moves.push({ n: m.n.replace(/[<>&"'`]/g, '').slice(0, 30) || 'Ataque', p: n(m.p, 1, 250), a: n(m.a, 1, 100), e: m.e, t: m.t })
+      }
+      return {
+        id: typeof o.id === 'string' && /^[\w.-]{1,40}$/.test(o.id) ? o.id : newId(), name, img: o.img, type: o.type,
+        hp: n(o.hp, 1, 200), atk: n(o.atk, 1, 200), def: n(o.def, 1, 200), spd: n(o.spd, 1, 200), rar: RAR[o.rar] ? o.rar : 'normal', moves,
+        fav: o.fav === true /* NUEVO: conserva el favorito al importar */
+      }
+    }
+    function importData(text) {
+      let data; try { data = JSON.parse(text) } catch (e) { return ioMsg('El texto no es un JSON válido.') }
+      const arr = Array.isArray(data) ? data : data && Array.isArray(data.luchadores) ? data.luchadores : null;
+      if (!arr) return ioMsg('El JSON no contiene una lista de luchadores.');
+      let ok = 0, dup = 0, bad = 0;
+      for (const o of arr.slice(0, 100)) {
+        const c = cleanChar(o); if (!c) { bad++; continue }
+        if (chars.some(x => x.id === c.id)) { dup++; continue }
+        chars.push(c); ok++
+      }
+      save(); renderSel();
+      ioMsg(`Importados: ${ok}${dup ? ` · ya existían: ${dup}` : ''}${bad ? ` · inválidos: ${bad}` : ''}.`)
+    }
+    $('#exp').onclick = exportJson;
+    $('#impb').onclick = () => $('#imp').click();
+    $('#impt').onclick = () => importData($('#iobox').value);
+    $('#imp').onchange = e => {
+      const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+      if (f.size > 8e6) return ioMsg('Archivo demasiado grande (máx. 8 MB).');
+      const r = new FileReader(); r.onload = () => importData(String(r.result)); r.onerror = () => ioMsg('No se pudo leer el archivo.'); r.readAsText(f)
+    };
+
+    /* ---------- NUEVO: Fusión de luchadores ---------- */
+    /* Sube 1 nivel de rareza y re-escala usando los mismos bonos de RAR que al crear:
+       estadísticas +Δb, poder +Δpw, precisión +Δac y, si el nuevo nivel tiene más ataques del tipo (tm),
+       el ataque genérico se convierte en uno del tipo propio. Modifica y devuelve c. */
+    function upgrade(c) {
+      const to = nextRar(c.rar); if (!to) return null;
+      const A = RAR[c.rar], Z = RAR[to];
+      for (const k of ['hp', 'atk', 'def', 'spd']) c[k] = clamp(c[k] + Z.b - A.b, 1, 200);
+      const pool = MV[c.type].filter(n => !c.moves.some(m => m.n === n));
+      c.moves.forEach((m, i) => {
+        m.p = clamp(m.p + Z.pw - A.pw, 1, 250); m.a = Math.min(100, m.a + Z.ac - A.ac);
+        if (i >= A.tm && i < Z.tm && GEN.includes(m.n) && pool.length) { m.n = pool.shift(); m.t = c.type }
+      });
+      c.rar = to; return c
+    }
+    const isMat = (x, base) => x.id !== base.id && x.rar === base.rar && !x.fav; /* los favoritos nunca son material */
+    const canBase = c => !!nextRar(c.rar) && chars.filter(x => isMat(x, c)).length >= 3;
+    let F = { base: null, mats: [] };
+    const fitem = (c, o) => {
+      const t = TYPES[c.type]; return `<button type="button" class="fi${o.on ? ' on' : ''}" data-id="${c.id}" data-act="${o.act}" style="--tc:${t.c}" aria-pressed="${!!o.on}"${o.dis ? ' disabled' : ''}>
+ ${c.fav ? '<span class="lk" title="Favorito">⭐</span>' : ''}<img src="${c.img}" alt=""><span><b>${esc(c.name)}</b><br>${rchip(c)}<small>${t.e} ${c.type} · HP ${c.hp} · Atq ${c.atk}</small>${o.note ? `<small>${o.note}</small>` : ''}</span></button>`
+    };
+    function renderFus() {
+      const base = chars.find(c => c.id === F.base);
+      $('#fusBase').innerHTML = chars.length ? favFirst(chars).map(c => {
+        const ok = canBase(c); return fitem(c, { act: 'base', on: c.id === F.base, dis: !ok, note: !nextRar(c.rar) ? 'Rareza máxima' : !ok ? 'Faltan materiales (3 de su rareza)' : '' })
+      }).join('') : '<p class="muted">Aún no hay luchadores.</p>';
+      if (!base) {
+        $('#fusMat').innerHTML = '<p class="muted">Primero elige un luchador base.</p>'; $('#fusN').textContent = ''; $('#fusPrev').innerHTML = ''
+      } else {
+        /* Materiales: misma rareza que el base. Los favoritos se muestran bloqueados 🔒 */
+        $('#fusMat').innerHTML = favFirst(chars.filter(x => x.id !== base.id && x.rar === base.rar)).map(c => {
+          const on = F.mats.includes(c.id);
+          return fitem(c, { act: 'mat', on, dis: c.fav || (!on && F.mats.length >= 3), note: c.fav ? '🔒 Favorito protegido' : '' })
+        }).join('');
+        $('#fusN').textContent = `(${F.mats.length}/3 · ${RAR[base.rar].l})`;
+        const up = upgrade(JSON.parse(JSON.stringify(base))), A = RAR[base.rar], Z = RAR[up.rar];
+        const st = (l, k) => `<span>${l} ${base[k]} → <b>${up[k]}</b></span>`;
+        const newMv = up.moves.filter((m, i) => m.n !== base.moves[i].n).map(m => m.n);
+        const gone = F.mats.map(id => esc(chars.find(c => c.id === id).name));
+        $('#fusPrev').innerHTML = `<div class="card" style="box-shadow:none"><b>${esc(base.name)}: ${A.s} ${A.l} → ${Z.s} ${Z.l}</b>
+ <div class="st" style="margin:8px 0">${st('❤️ HP', 'hp')}${st('⚔️ Ataque', 'atk')}${st('🛡️ Defensa', 'def')}${st('💨 Velocidad', 'spd')}</div>
+ <small class="muted">Ataques: poder +${Z.pw - A.pw} · precisión +${Z.ac - A.ac}%${newMv.length ? ` · nuevo ataque de tipo: ${newMv.join(', ')}` : ''}</small>
+ ${gone.length ? `<p class="muted" style="margin:6px 0 0">Se consumirán: <b>${gone.join(', ')}</b></p>` : ''}</div>`
+      }
+      $('#fusOk').disabled = !(base && F.mats.length === 3)
+    }
+    $('#fusb').onclick = () => { F = { base: null, mats: [] }; $('#fusMsg').textContent = ''; renderFus(); $('#fus').showModal() };
+    $('#fusX').onclick = () => $('#fus').close();
+    $('#fus').onclick = e => {
+      const b = e.target.closest('.fi'); if (!b || b.disabled) return; const id = b.dataset.id;
+      if (b.dataset.act === 'base') { F.base = F.base === id ? null : id; F.mats = [] }
+      else F.mats = F.mats.includes(id) ? F.mats.filter(x => x !== id) : F.mats.length < 3 ? [...F.mats, id] : F.mats;
+      $('#fusMsg').textContent = ''; renderFus()
+    };
+    $('#fusOk').onclick = () => {
+      const base = chars.find(c => c.id === F.base), mats = F.mats.map(id => chars.find(c => c.id === id));
+      /* Validación final antes de consumir nada */
+      if (!base || !nextRar(base.rar) || mats.length !== 3 || mats.some(m => !m || !isMat(m, base))) { F.mats = []; renderFus(); return }
+      const from = RAR[base.rar].l, gone = new Set(F.mats);
+      upgrade(base);
+      chars = chars.filter(c => !gone.has(c.id)); /* los materiales se eliminan para siempre */
+      if (gone.has(sel.p)) sel.p = null; if (gone.has(sel.c)) sel.c = null;
+      save(); renderSel();
+      F = { base: canBase(base) ? base.id : null, mats: [] }; renderFus();
+      $('#fusMsg').textContent = `✨ ¡${base.name} ascendió de ${from} a ${RAR[base.rar].l}!`
+    };
+
+    $('#cnt').textContent = chars.length;
+    refreshQuota();
+  </script>
+</body>
+
+</html>

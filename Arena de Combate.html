@@ -712,6 +712,15 @@
       background: rgba(10, 10, 30, .6)
     }
 
+    /* Modal de confirmación de borrado */
+    dialog.fus.del {
+      max-width: 420px
+    }
+
+    .btn.danger {
+      background: #e5484d
+    }
+
     .fgrid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -782,7 +791,7 @@
 <body>
   <div class="wrap">
     <header>
-      <h1>⚔️ Arena de Combate V0.3</h1>
+      <h1>⚔️ Arena de Combate V0.4</h1>
       <nav><button class="btn alt" data-s="create">Crear luchador</button><button class="btn alt"
           data-s="select">Luchadores <span id="cnt">0</span></button></nav>
     </header>
@@ -872,6 +881,17 @@
       <div class="bar-row" style="margin:14px 0 0">
         <span id="fusMsg" class="muted" role="status"></span>
         <button id="fusOk" class="btn" type="button" disabled>Confirmar fusión</button>
+      </div>
+    </dialog>
+
+    <!-- Confirmación antes de eliminar un luchador -->
+    <dialog id="del" class="fus del" aria-labelledby="delT" aria-describedby="delMsg">
+      <h2 id="delT">🗑️ Eliminar luchador</h2>
+      <div id="delCard"></div>
+      <p id="delMsg"></p>
+      <div class="bar-row" style="margin:14px 0 0">
+        <button id="delNo" class="btn alt" type="button" autofocus>Cancelar</button>
+        <button id="delOk" class="btn danger" type="button">Eliminar</button>
       </div>
     </dialog>
   </div>
@@ -1033,7 +1053,7 @@
       const el = e.target.closest('.ch'); if (!el) return; const id = el.dataset.id;
       /* NUEVO: marcar/desmarcar favorito (se guarda en localStorage) */
       if (e.target.closest('[data-fav]')) { const c = chars.find(x => x.id === id); if (c) { c.fav = !c.fav; save() } renderSel(); return }
-      if (e.target.closest('[data-del]')) { const c = chars.find(x => x.id === id); if (c && c.fav && !confirm(`${c.name} es favorito. ¿Eliminarlo de todos modos?`)) return; chars = chars.filter(c => c.id !== id); if (sel.p === id) sel.p = null; if (sel.c === id) sel.c = null; save(); renderSel(); return }
+      if (e.target.closest('[data-del]')) { askDel(id); return }
       if (sel.p === id) sel.p = null; else if (sel.c === id) sel.c = null; else if (!sel.p) sel.p = id; else sel.c = id; renderSel()
     };
     $('#grid').onkeydown = e => { if (e.key === 'Enter' && e.target.classList.contains('ch')) e.target.click() };
@@ -1248,6 +1268,21 @@
       save(); renderSel();
       F = { base: canBase(base) ? base.id : null, mats: [] }; renderFus();
       $('#fusMsg').textContent = `✨ ¡${base.name} ascendió de ${from} a ${RAR[base.rar].l}!`
+    };
+
+    /* Confirmación de borrado */
+    let delId = null;
+    function askDel(id) {
+      const c = chars.find(x => x.id === id); if (!c) return; delId = id;
+      $('#delCard').innerHTML = card(c);
+      $('#delMsg').innerHTML = `¿Seguro que quieres eliminar a <b>${esc(c.name)}</b>? Esta acción no se puede deshacer.${c.fav ? '<br>⭐ <b>Es uno de tus favoritos.</b>' : ''}`;
+      $('#del').showModal()
+    }
+    $('#delNo').onclick = () => $('#del').close();
+    $('#del').addEventListener('close', () => delId = null);
+    $('#delOk').onclick = () => {
+      const id = delId; $('#del').close(); if (!id) return;
+      chars = chars.filter(c => c.id !== id); if (sel.p === id) sel.p = null; if (sel.c === id) sel.c = null; save(); renderSel()
     };
 
     $('#cnt').textContent = chars.length;

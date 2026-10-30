@@ -632,6 +632,58 @@
       }
     }
 
+    /* Rarezas divinas: solo por fusión (Semidiós) o 100 victorias (Dios) */
+    .rc-semidios {
+      background: linear-gradient(90deg, #8e9bb5, #e6ecf7, #8e9bb5);
+      color: #17163a
+    }
+
+    .rc-dios {
+      background: linear-gradient(90deg, #ffd700, #fff6c2, #ffb300);
+      color: #17163a
+    }
+
+    .ch.rr-semidios {
+      box-shadow: var(--sh), 0 0 30px #c9d4ea;
+      animation: semidios 2.5s ease-in-out infinite
+    }
+
+    .ch.rr-dios {
+      box-shadow: var(--sh), 0 0 36px #ffd700;
+      animation: dios 2s ease-in-out infinite
+    }
+
+    @keyframes semidios {
+      50% {
+        box-shadow: var(--sh), 0 0 40px #ffffff, 0 0 12px #8e9bb5
+      }
+    }
+
+    @keyframes dios {
+      50% {
+        box-shadow: var(--sh), 0 0 52px #ffd700, 0 0 20px #fff6c2
+      }
+    }
+
+    .gw {
+      display: block;
+      color: var(--mut);
+      margin-top: 4px
+    }
+
+    .gw.ab {
+      color: var(--tx);
+      font-weight: 700;
+      cursor: help
+    }
+
+    .abd {
+      margin: 10px 0 0;
+      padding: 8px 10px;
+      border: 2px dashed var(--rc);
+      border-radius: 12px
+    }
+
     .spr.dodge {
       animation: dodge .7s ease-in-out;
       z-index: 2
@@ -870,9 +922,10 @@
         <h2 id="fusT">🧬 Fusión de luchadores</h2>
         <button id="fusX" class="btn alt" type="button" aria-label="Cerrar">✕</button>
       </div>
-      <p class="muted">Elige 1 luchador base y 3 materiales de su misma rareza. El base sube 1 nivel de rareza y sus
-        estadísticas se recalculan. Los materiales se consumen para siempre. Los favoritos ⭐ no se pueden usar como
-        material.</p>
+      <p class="muted">Elige 1 luchador base y 3 materiales de su misma rareza (10 si es Uber, para crear un
+        Semidiós). El base sube 1 nivel de rareza y sus estadísticas se recalculan. Los materiales se consumen para
+        siempre. Los favoritos ⭐ no se pueden usar como material. Un Semidiós solo evoluciona a Dios ganando 100
+        batallas.</p>
       <h3>1. Luchador base</h3>
       <div id="fusBase" class="fgrid"></div>
       <h3>2. Materiales <span id="fusN" class="muted"></span></h3>
@@ -881,6 +934,16 @@
       <div class="bar-row" style="margin:14px 0 0">
         <span id="fusMsg" class="muted" role="status"></span>
         <button id="fusOk" class="btn" type="button" disabled>Confirmar fusión</button>
+      </div>
+    </dialog>
+
+    <!-- Aviso de evolución a Dios (tras la victoria 100 de un Semidiós) -->
+    <dialog id="evo" class="fus del" aria-labelledby="evoT">
+      <h2 id="evoT">🌟 ¡Evolución divina!</h2>
+      <div id="evoCard"></div>
+      <p id="evoMsg"></p>
+      <div class="bar-row" style="margin:14px 0 0;justify-content:flex-end">
+        <button id="evoOk" class="btn" type="button" autofocus>¡Increíble!</button>
       </div>
     </dialog>
 
@@ -926,17 +989,48 @@
     };
     const GEN = ['Embestida', 'Mirada Fija', 'Golpe Furia', 'Grito Salvaje', 'Placaje Veloz'];
     const EFX = { puro: 'Daño puro', crit: 'Alta prob. de crítico', def: 'Baja la defensa', cura: 'Absorbe vida' };
-    /* Rarezas: w=probabilidad %, b=bono a estadísticas, pw=bono de poder, ac=bono de precisión, tm=ataques del tipo propio (el resto es genérico) */
+    /* Rarezas: w=probabilidad %, b=bono a estadísticas, pw=bono de poder, ac=bono de precisión, tm=ataques del tipo propio (el resto es genérico),
+       m=materiales necesarios para fusionar al siguiente nivel (0 = no se puede fusionar) */
     const RAR = {
-      normal: { l: 'Normal', c: '#8d8d7c', s: '●', w: 60, b: 0, pw: 0, ac: 0, tm: 3 },
-      raro: { l: 'Raro', c: '#2f8cff', s: '◆', w: 25, b: 5, pw: 6, ac: 2, tm: 3 },
-      mitico: { l: 'Mítico', c: '#a64dff', s: '✦', w: 10, b: 12, pw: 14, ac: 4, tm: 4 },
-      legendario: { l: 'Legendario', c: '#f0a500', s: '★', w: 4, b: 20, pw: 24, ac: 6, tm: 4 },
-      uber: { l: 'Uber', c: '#ff2d6f', s: '✪', w: 1, b: 30, pw: 36, ac: 8, tm: 4 }
+      normal: { l: 'Normal', c: '#8d8d7c', s: '●', w: 60, b: 0, pw: 0, ac: 0, tm: 3, m: 3 },
+      raro: { l: 'Raro', c: '#2f8cff', s: '◆', w: 25, b: 5, pw: 6, ac: 2, tm: 3, m: 3 },
+      mitico: { l: 'Mítico', c: '#a64dff', s: '✦', w: 10, b: 12, pw: 14, ac: 4, tm: 4, m: 3 },
+      legendario: { l: 'Legendario', c: '#f0a500', s: '★', w: 4, b: 20, pw: 24, ac: 6, tm: 4, m: 3 },
+      uber: { l: 'Uber', c: '#ff2d6f', s: '✪', w: 1, b: 30, pw: 36, ac: 8, tm: 4, m: 10 },
+      /* w: 0 → nunca salen al crear. Semidiós: fusión Uber + 10 Uber. Dios: 100 victorias con un Semidiós */
+      semidios: { l: 'Semidiós', c: '#c9d4ea', s: '☀', w: 0, b: 45, pw: 52, ac: 10, tm: 4, m: 0 },
+      dios: { l: 'Dios', c: '#ffd700', s: '♛', w: 0, b: 65, pw: 75, ac: 12, tm: 4, m: 0 }
     };
+    const GOD_WINS = 100; /* victorias de un Semidiós para evolucionar a Dios */
+    /* Habilidades pasivas: se asignan al azar al llegar a Semidiós y se conservan como Dios. No dependen del tipo. */
+    const ABIL = {
+      robusto: { n: 'Robustez', d: 'Una vez por combate, sobrevive con 1 HP a un golpe que lo debilitaría.' },
+      escudo: { n: 'Escudo Divino', d: 'Anula por completo el primer ataque que recibe en el combate.' },
+      furia: { n: 'Furia', d: 'Con menos del 50% de HP, su daño aumenta un 50%.' },
+      filtro: { n: 'Filtro', d: 'Recibe un 15% menos de daño, y los ataques muy eficaces le hacen la mitad.' },
+      fuerza: { n: 'Fuerza Bruta', d: 'Todos sus ataques hacen un 25% más de daño.' },
+      certero: { n: 'Ojo Certero', d: 'Sus ataques nunca fallan, no se pueden esquivar y tienen +10% de probabilidad de crítico.' },
+      velo: { n: 'Velo Ilusorio', d: '20% de probabilidad de esquivar cualquier ataque.' },
+      asesino: { n: 'Instinto Asesino', d: '+20% de probabilidad de crítico y sus críticos hacen x2 en vez de x1.5.' },
+      regenera: { n: 'Regeneración', d: 'Recupera un 8% de su HP máximo al final de cada turno.' },
+      vampiro: { n: 'Sed de Sangre', d: 'Absorbe como vida el 20% del daño que causa.' },
+      espinas: { n: 'Espinas', d: 'Quien le golpea recibe el 20% del daño causado.' },
+      prisa: { n: 'Primer Golpe', d: 'Siempre ataca primero, sin importar la velocidad, y hace un 15% más de daño.' },
+      ferrea: { n: 'Voluntad Férrea', d: 'Su defensa sube un 20%, no se puede reducir y es inmune a los golpes críticos.' },
+      imparable: { n: 'Imparable', d: 'Ignora las resistencias (nunca es “poco eficaz”) y el 20% de la defensa del rival.' },
+      intimida: { n: 'Intimidación', d: 'Al empezar el combate, el ataque del rival baja un 20%.' },
+      aliento: { n: 'Segundo Aliento', d: 'Una vez por combate, al bajar del 30% de HP recupera un 35%.' },
+      ira: { n: 'Ira Creciente', d: 'Su daño sube un 12% cada turno (máximo +100%).' },
+      demoledor: { n: 'Golpe Demoledor', d: 'Cada golpe tiene un 50% de probabilidad de bajar mucho la defensa del rival.' },
+      eco: { n: 'Eco de Batalla', d: '25% de probabilidad de golpear una segunda vez con la mitad de daño.' },
+      apertura: { n: 'Golpe Inaugural', d: 'Su primer ataque del combate no falla y hace el doble de daño.' }
+    };
+    const AK = Object.keys(ABIL), rndAb = () => AK[Math.random() * AK.length | 0];
+    const divine = k => k === 'semidios' || k === 'dios';
     const rollRar = () => { let r = Math.random() * 100; for (const k in RAR) { if ((r -= RAR[k].w) < 0) return k } return 'normal' };
-    /* NUEVO: escala de rarezas para la fusión (Normal → Raro → Mítico → Legendario → Uber) */
+    /* Escala de rarezas (Normal → Raro → Mítico → Legendario → Uber → Semidiós → Dios) */
     const RK = Object.keys(RAR), nextRar = k => RK[RK.indexOf(k) + 1] || null;
+    const fusible = k => RAR[k].m > 0 && !!nextRar(k); /* Semidiós → Dios no es por fusión */
     /* NUEVO: favoritos siempre primero, conservando el orden original del resto */
     const favFirst = list => [...list].sort((a, b) => !!b.fav - !!a.fav);
 
@@ -945,7 +1039,8 @@
     try { chars = JSON.parse(localStorage.getItem('arena_chars') || '[]') } catch (e) { chars = [] }
     const save = () => { try { localStorage.setItem('arena_chars', JSON.stringify(chars)) } catch (e) { } };
     if (!Array.isArray(chars)) chars = [];
-    chars.forEach(c => { if (!RAR[c.rar]) c.rar = 'normal'; c.fav = !!c.fav }); /* NUEVO: campo fav (favorito) */
+    chars.forEach(c => { if (!RAR[c.rar]) c.rar = 'normal'; c.fav = !!c.fav; c.sw = c.rar === 'semidios' ? clamp(+c.sw || 0, 0, GOD_WINS) : 0; if (divine(c.rar)) { if (!ABIL[c.ab]) c.ab = rndAb() } else delete c.ab }); /* NUEVO: campo fav (favorito) */
+    save();
     const newId = () => Date.now() + Math.random().toString(36).slice(2, 6);
     /* Cupo diario: 30 luchadores por día, no acumulable (se reinicia cada día) */
     const LIMIT = 30;
@@ -1003,8 +1098,9 @@
     const card = (c, o = {}) => {
       const t = TYPES[c.type], r = RAR[c.rar] || RAR.normal; return `<div class="ch card rr-${c.rar}${sel.p === c.id ? ' sel-p' : ''}${sel.c === c.id ? ' sel-c' : ''}" data-id="${c.id}" style="--tc:${t.c};--rc:${r.c}" ${o.pick ? 'tabindex="0"' : ''}>
  ${o.pick ? `<button class="favb${c.fav ? ' on' : ''}" data-fav aria-pressed="${!!c.fav}" title="${c.fav ? 'Quitar de favoritos' : 'Marcar como favorito'}" aria-label="Favorito">${c.fav ? '★' : '☆'}</button><button class="x" data-del title="Eliminar" aria-label="Eliminar">✕</button>` : ''}
- <div class="row"><img class="thumb" src="${c.img}" alt=""><div><b>${esc(c.name)}</b><br><span class="chip">${t.e} ${c.type}</span>${rchip(c)}</div></div>
+ <div class="row"><img class="thumb" src="${c.img}" alt=""><div><b>${esc(c.name)}</b><br><span class="chip">${t.e} ${c.type}</span>${rchip(c)}${c.rar === 'semidios' ? `<small class="gw">⚡ Victorias para ser Dios: ${c.sw || 0}/${GOD_WINS}</small>` : ''}${ABIL[c.ab] ? `<small class="gw ab" title="${ABIL[c.ab].d}">✨ ${ABIL[c.ab].n}</small>` : ''}</div></div>
  <div class="st"><span>❤️ HP ${c.hp}</span><span>⚔️ Ataque ${c.atk}</span><span>🛡️ Defensa ${c.def}</span><span>💨 Velocidad ${c.spd}</span></div>
+ ${o.full && ABIL[c.ab] ? `<p class="abd"><b>✨ Habilidad pasiva: ${ABIL[c.ab].n}</b><br><small>${ABIL[c.ab].d}</small></p>` : ''}
  ${o.full ? `<ul class="ml">${c.moves.map(m => `<li><b>${m.n}</b> (${m.t})<br><small>Poder ${m.p} · Precisión ${m.a}% · ${EFX[m.e]}</small></li>`).join('')}</ul>` : ''}</div>`
     };
 
@@ -1062,8 +1158,11 @@
     /* ---------- Combate ---------- */
     const eff = (mt, dt) => TYPES[mt].s.includes(dt) ? 1.5 : TYPES[dt].s.includes(mt) ? .75 : 1;
     const say = t => { const l = $('#log'), p = document.createElement('p'); p.textContent = t; l.appendChild(p); l.scrollTop = l.scrollHeight };
-    const fighter = c => { const m = c.hp * 2 + 60; return { c, max: m, hp: m, dm: 1, dealt: 0 } };
-    function infoBox(k) { const f = B[k], t = TYPES[f.c.type]; return `<b>${esc(f.c.name)}</b> <span class="chip" style="--tc:${t.c}">${t.e} ${f.c.type}</span>${rchip(f.c)}<div class="bar"><i id="b${k}"></i></div><small id="t${k}"></small>` }
+    /* ab = habilidad pasiva · am = multiplicador de ataque (Intimidación) · used = habilidades de un solo uso ya gastadas */
+    const fighter = c => { const m = c.hp * 2 + 60; return { c, max: m, hp: m, dm: 1, am: 1, dealt: 0, ab: ABIL[c.ab] ? c.ab : null, used: {}, first: true } };
+    const has = (f, k) => f.ab === k;
+    const abSay = (f, t) => say(`✨ [${ABIL[f.ab].n}] ${t}`);
+    function infoBox(k) { const f = B[k], t = TYPES[f.c.type]; return `<b>${esc(f.c.name)}</b> <span class="chip" style="--tc:${t.c}">${t.e} ${f.c.type}</span>${rchip(f.c)}${f.ab ? `<small class="gw ab" title="${ABIL[f.ab].d}">✨ ${ABIL[f.ab].n}</small>` : ''}<div class="bar"><i id="b${k}"></i></div><small id="t${k}"></small>` }
     function upd() {
       for (const k of ['p', 'e']) {
         const f = B[k], pc = f.hp / f.max * 100, i = $('#b' + k);
@@ -1077,7 +1176,8 @@
       $('#ip').innerHTML = infoBox('p'); $('#ie').innerHTML = infoBox('e'); upd(); $('#log').innerHTML = '';
       $('#menu').innerHTML = P.moves.map((m, i) => `<button class="mv" data-i="${i}" style="--tc:${TYPES[m.t].c}"><b>${m.n}</b><small>${TYPES[m.t].e} ${m.t} · Poder ${m.p} · Precisión ${m.a}%</small><small>${EFX[m.e]}</small></button>`).join('');
       show('battle'); say(`¡${E.name} (${E.type}) quiere luchar contra ${P.name}!`);
-      say(P.spd > E.spd ? `${P.name} es más veloz y atacará primero.` : P.spd < E.spd ? `${E.name} es más veloz y atacará primero.` : 'Velocidades iguales: el orden se decide al azar.')
+      say(P.spd > E.spd ? `${P.name} es más veloz y atacará primero.` : P.spd < E.spd ? `${E.name} es más veloz y atacará primero.` : 'Velocidades iguales: el orden se decide al azar.');
+      for (const [k, o] of [['p', 'e'], ['e', 'p']]) if (has(B[k], 'intimida')) { B[o].am = .8; abSay(B[k], `¡${B[o].c.name} se siente intimidado! Su ataque baja.`) }
     }
     $('#menu').onclick = e => { const b = e.target.closest('.mv'); if (b && !B.busy && !B.over) turn(+b.dataset.i) };
     const lock = v => document.querySelectorAll('.mv').forEach(b => b.disabled = v);
@@ -1088,8 +1188,10 @@
     async function turn(i) {
       B.busy = true; lock(true); B.turns++; say(`— Turno ${B.turns} —`);
       const pm = B.p.c.moves[i], em = cpuPick(), ps = B.p.c.spd, es = B.e.c.spd;
-      const order = ps > es || (ps == es && Math.random() < .5) ? ['p', 'e'] : ['e', 'p'];
+      const pp = has(B.p, 'prisa'), ep = has(B.e, 'prisa'); /* Primer Golpe manda sobre la velocidad */
+      const order = pp !== ep ? (pp ? ['p', 'e'] : ['e', 'p']) : ps > es || (ps == es && Math.random() < .5) ? ['p', 'e'] : ['e', 'p'];
       for (const k of order) { if (B.over) break; await act(k, k == 'p' ? pm : em); await sleep(350) }
+      if (!B.over) for (const k of ['p', 'e']) { const f = B[k]; if (has(f, 'regenera') && f.hp < f.max) { const h = Math.ceil(f.max * .08); f.hp = Math.min(f.max, f.hp + h); upd(); abSay(f, `${f.c.name} recuperó ${h} HP.`) } }
       if (!B.over) { B.busy = false; lock(false) }
     }
     function float(el, txt, cls = '') {
@@ -1108,30 +1210,81 @@
       const o = k == 'p' ? 'e' : 'p', a = B[k], d = B[o], sa = $('#s' + k), sd = $('#s' + o);
       say(`${a.c.name} usó ${m.n}.`);
       sa.classList.add('lunge-' + k); await sleep(300); sa.classList.remove('lunge-' + k);
-      if (Math.random() * 100 > m.a) { say(`¡${d.c.name} esquivó el ataque!`); await dodge(sd, o); return }
-      const crit = Math.random() < (m.e == 'crit' ? .3 : .07), e = eff(m.t, d.c.type);
+      const open = a.first && has(a, 'apertura'); a.first = false;
+      const sure = open || has(a, 'certero');
+      if (!sure && Math.random() * 100 > m.a) { say(`¡${d.c.name} esquivó el ataque!`); await dodge(sd, o); return }
+      if (!sure && has(d, 'velo') && Math.random() < .2) { abSay(d, `¡${d.c.name} se desvaneció y esquivó el ataque!`); await dodge(sd, o); return }
+      if (has(d, 'escudo') && !d.used.escudo) {
+        d.used.escudo = true; float(sd, '¡Bloqueado!', 'dg'); abSay(d, `¡${d.c.name} anuló el ataque por completo!`); await sleep(500); return
+      }
+      const crit = !has(d, 'ferrea') && Math.random() < (m.e == 'crit' ? .3 : .07) + (has(a, 'asesino') ? .2 : 0) + (has(a, 'certero') ? .1 : 0);
+      let e = eff(m.t, d.c.type); if (e < 1 && has(a, 'imparable')) { e = 1; abSay(a, 'ignora la resistencia del rival.') }
+      /* Multiplicador de habilidades pasivas */
+      let x = a.am * (has(a, 'fuerza') ? 1.25 : 1) * (has(a, 'furia') && a.hp < a.max / 2 ? 1.5 : 1) * (open ? 2 : 1) * (has(a, 'prisa') ? 1.15 : 1);
+      if (has(a, 'ira')) x *= 1 + Math.min(1, .12 * B.turns);
+      if (has(d, 'ferrea')) x /= 1.2;
+      if (has(a, 'imparable')) x /= .8; /* atraviesa el 20% de la defensa */
+      if (has(d, 'filtro')) { x *= .85; if (e > 1) { x *= .5; abSay(d, `${d.c.name} amortigua el golpe muy eficaz.`) } }
+      if (open) abSay(a, '¡Primer ataque devastador!');
       /* Daño = Poder × (Ataque / Defensa) × 0.35 × aleatorio ±15% × bonos */
-      let dmg = m.p * (a.c.atk / (d.c.def * d.dm)) * .35 * (.85 + Math.random() * .3) * (m.t == a.c.type ? 1.2 : 1) * e * (crit ? 1.5 : 1);
-      dmg = Math.max(1, Math.round(dmg)); d.hp = Math.max(0, d.hp - dmg); a.dealt += dmg;
+      let dmg = m.p * (a.c.atk / (d.c.def * d.dm)) * .35 * (.85 + Math.random() * .3) * (m.t == a.c.type ? 1.2 : 1) * e * (crit ? (has(a, 'asesino') ? 2 : 1.5) : 1) * x;
+      dmg = hurt(a, d, Math.max(1, Math.round(dmg)));
       if (!B.best || dmg > B.best.d) B.best = { d: dmg, n: m.n, by: a.c.name };
       sd.classList.add('hit'); float(sd, '-' + dmg);
       if (m.e == 'cura') { const h = Math.round(dmg * .3); a.hp = Math.min(a.max, a.hp + h); say(`${a.c.name} absorbió ${h} HP.`) }
       upd(); say(`${d.c.name} recibió ${dmg} de daño.`);
       if (crit) say('¡Es un golpe crítico!'); if (e > 1) say('¡Es muy eficaz!'); if (e < 1) say('No es muy eficaz…');
       await sleep(500); sd.classList.remove('hit');
-      if (d.hp > 0) { if (m.e == 'def' && d.dm > .5 && Math.random() < .5) { d.dm *= .85; say(`¡La defensa de ${d.c.name} bajó!`) } }
-      else { B.over = true; sd.classList.add('faint'); say(`¡${d.c.name} se debilitó!`); await sleep(1200); finish(k) }
+      if (d.hp > 0 && has(a, 'eco') && Math.random() < .25) {
+        const d2 = hurt(a, d, Math.max(1, Math.round(dmg / 2))); sd.classList.add('hit'); float(sd, '-' + d2); upd();
+        abSay(a, `¡Golpe extra! ${d.c.name} recibió ${d2} de daño.`); await sleep(500); sd.classList.remove('hit')
+      }
+      after(a, d, dmg);
+      if (d.hp > 0) {
+        if (!has(d, 'ferrea') && d.dm > .5) {
+          if (m.e == 'def' && Math.random() < .5) { d.dm *= .85; say(`¡La defensa de ${d.c.name} bajó!`) }
+          else if (has(a, 'demoledor') && Math.random() < .5) { d.dm = Math.max(.5, d.dm * .8); abSay(a, `¡La defensa de ${d.c.name} bajó!`) }
+        }
+        if (has(d, 'aliento') && !d.used.aliento && d.hp < d.max * .3) { d.used.aliento = true; const h = Math.round(d.max * .35); d.hp = Math.min(d.max, d.hp + h); upd(); abSay(d, `¡${d.c.name} recupera ${h} HP!`) }
+      }
+      if (d.hp <= 0) { B.over = true; sd.classList.add('faint'); say(`¡${d.c.name} se debilitó!`); await sleep(1200); finish(k) }
+      else if (a.hp <= 0) { B.over = true; sa.classList.add('faint'); say(`¡${a.c.name} se debilitó por las espinas!`); await sleep(1200); finish(o) }
+    }
+    /* Aplica daño al defensor respetando Robustez; devuelve el daño real causado */
+    function hurt(a, d, dmg) {
+      if (dmg >= d.hp && has(d, 'robusto') && !d.used.robusto && d.hp > 1) { d.used.robusto = true; dmg = d.hp - 1; abSay(d, `¡${d.c.name} resistió el golpe con 1 HP!`) }
+      dmg = Math.min(dmg, d.hp); d.hp -= dmg; a.dealt += dmg; return dmg
+    }
+    /* Efectos tras golpear: Sed de Sangre (atacante) y Espinas (defensor) */
+    function after(a, d, dmg) {
+      if (has(a, 'vampiro') && a.hp > 0) { const h = Math.max(1, Math.round(dmg * .2)); a.hp = Math.min(a.max, a.hp + h); abSay(a, `${a.c.name} absorbió ${h} HP.`) }
+      if (has(d, 'espinas')) { const r = Math.max(1, Math.round(dmg * .2)); a.hp = Math.max(0, a.hp - r); abSay(d, `${a.c.name} se hirió con las espinas (-${r} HP).`) }
+      upd()
     }
     function finish(k) {
       const w = B[k], l = B[k == 'p' ? 'e' : 'p'], t = TYPES[w.c.type], win = k == 'p', b = B.best;
+      /* Victorias de un Semidiós controlado por el jugador: a las GOD_WINS evoluciona a Dios */
+      let god = '', evo = false;
+      if (win && w.c.rar === 'semidios') {
+        w.c.sw = (w.c.sw || 0) + 1;
+        if (w.c.sw >= GOD_WINS) { upgrade(w.c); w.c.sw = 0; evo = true } else god = `<p class="muted">⚡ Progreso hacia Dios: <b>${w.c.sw}/${GOD_WINS}</b> victorias</p>`;
+        save()
+      }
       $('#res').style.setProperty('--tc', t.c);
-      $('#res').innerHTML = `<h2>${win ? '🏆 ¡Victoria!' : '💀 Derrota'}</h2><img src="${w.c.img}" alt=""><h3>${esc(w.c.name)} gana el combate</h3>
+      $('#res').innerHTML = `<h2>${win ? '🏆 ¡Victoria!' : '💀 Derrota'}</h2><img src="${w.c.img}" alt=""><h3>${esc(w.c.name)} gana el combate</h3>${god}
  <div class="stats"><div>Turnos<b>${B.turns}</b></div><div>HP restante del ganador<b>${w.hp} / ${w.max}</b></div>
  <div>Daño de ${esc(B.p.c.name)}<b>${B.p.dealt}</b></div><div>Daño de ${esc(B.e.c.name)}<b>${B.e.dealt}</b></div>
  <div style="grid-column:1/-1">Ataque más devastador<b>${b ? `${esc(b.n)} · ${b.d} de daño (${esc(b.by)})` : '—'}</b></div></div>
  <button class="btn" id="again">Revancha</button> <button class="btn alt" id="menuBtn">Volver al Menú Principal</button>`;
-      $('#again').onclick = startBattle; $('#menuBtn').onclick = () => show('select'); show('result')
+      $('#again').onclick = startBattle; $('#menuBtn').onclick = () => show('select'); show('result');
+      if (evo) showEvo(w.c)
     }
+    function showEvo(c) {
+      $('#evoCard').innerHTML = card(c, { full: true });
+      $('#evoMsg').innerHTML = `Tras ${GOD_WINS} victorias, <b>${esc(c.name)}</b> ha evolucionado de ${RAR.semidios.s} Semidiós a <b>${RAR.dios.s} Dios</b>. ¡Sus estadísticas y ataques han aumentado!`;
+      $('#evo').showModal()
+    }
+    $('#evoOk').onclick = () => $('#evo').close();
     /* ---------- Cupo y recompensa ---------- */
     function refreshQuota() {
       const d = dly(), l = left();
@@ -1142,7 +1295,7 @@
       rw.textContent = d.reward === 0 ? '🎁 Recompensa' : d.reward === 1 ? '🎁 Recompensa canjeada' : '🎁 Recompensa usada hoy';
       if (d.reward !== 0) $('#rwbox').style.display = 'none'
     }
-    $('#odds').textContent = 'Rareza al azar: ' + Object.values(RAR).map(r => `${r.s} ${r.l} ${r.w}%`).join(' · ') + '. Más rareza = mejores estadísticas y ataques.';
+    $('#odds').textContent = 'Rareza al azar: ' + Object.values(RAR).filter(r => r.w).map(r => `${r.s} ${r.l} ${r.w}%`).join(' · ') + '. Más rareza = mejores estadísticas y ataques.';
     $('#rw').onclick = () => { const b = $('#rwbox'), open = b.style.display === 'none'; b.style.display = open ? 'block' : 'none'; if (open) $('#rwpw').focus() };
     function redeem() {
       const d = dly(), m = $('#rwmsg'); if (d.reward !== 0) return;
@@ -1177,7 +1330,9 @@
       return {
         id: typeof o.id === 'string' && /^[\w.-]{1,40}$/.test(o.id) ? o.id : newId(), name, img: o.img, type: o.type,
         hp: n(o.hp, 1, 200), atk: n(o.atk, 1, 200), def: n(o.def, 1, 200), spd: n(o.spd, 1, 200), rar: RAR[o.rar] ? o.rar : 'normal', moves,
-        fav: o.fav === true /* NUEVO: conserva el favorito al importar */
+        fav: o.fav === true, /* NUEVO: conserva el favorito al importar */
+        sw: o.rar === 'semidios' ? n(o.sw, 0, GOD_WINS) : 0,
+        ...(divine(o.rar) ? { ab: ABIL[o.ab] ? o.ab : rndAb() } : {})
       }
     }
     function importData(text) {
@@ -1215,10 +1370,11 @@
         m.p = clamp(m.p + Z.pw - A.pw, 1, 250); m.a = Math.min(100, m.a + Z.ac - A.ac);
         if (i >= A.tm && i < Z.tm && GEN.includes(m.n) && pool.length) { m.n = pool.shift(); m.t = c.type }
       });
-      c.rar = to; return c
+      c.rar = to; if (divine(to) && !ABIL[c.ab]) c.ab = rndAb(); /* habilidad pasiva aleatoria al llegar a Semidiós */
+      return c
     }
     const isMat = (x, base) => x.id !== base.id && x.rar === base.rar && !x.fav; /* los favoritos nunca son material */
-    const canBase = c => !!nextRar(c.rar) && chars.filter(x => isMat(x, c)).length >= 3;
+    const canBase = c => fusible(c.rar) && chars.filter(x => isMat(x, c)).length >= RAR[c.rar].m;
     let F = { base: null, mats: [] };
     const fitem = (c, o) => {
       const t = TYPES[c.type]; return `<button type="button" class="fi${o.on ? ' on' : ''}" data-id="${c.id}" data-act="${o.act}" style="--tc:${t.c}" aria-pressed="${!!o.on}"${o.dis ? ' disabled' : ''}>
@@ -1227,47 +1383,48 @@
     function renderFus() {
       const base = chars.find(c => c.id === F.base);
       $('#fusBase').innerHTML = chars.length ? favFirst(chars).map(c => {
-        const ok = canBase(c); return fitem(c, { act: 'base', on: c.id === F.base, dis: !ok, note: !nextRar(c.rar) ? 'Rareza máxima' : !ok ? 'Faltan materiales (3 de su rareza)' : '' })
+        const ok = canBase(c); return fitem(c, { act: 'base', on: c.id === F.base, dis: !ok, note: !nextRar(c.rar) ? 'Rareza máxima' : !fusible(c.rar) ? `Evoluciona ganando ${GOD_WINS} batallas` : !ok ? `Faltan materiales (${RAR[c.rar].m} de su rareza)` : '' })
       }).join('') : '<p class="muted">Aún no hay luchadores.</p>';
       if (!base) {
         $('#fusMat').innerHTML = '<p class="muted">Primero elige un luchador base.</p>'; $('#fusN').textContent = ''; $('#fusPrev').innerHTML = ''
       } else {
+        const need = RAR[base.rar].m;
         /* Materiales: misma rareza que el base. Los favoritos se muestran bloqueados 🔒 */
         $('#fusMat').innerHTML = favFirst(chars.filter(x => x.id !== base.id && x.rar === base.rar)).map(c => {
           const on = F.mats.includes(c.id);
-          return fitem(c, { act: 'mat', on, dis: c.fav || (!on && F.mats.length >= 3), note: c.fav ? '🔒 Favorito protegido' : '' })
+          return fitem(c, { act: 'mat', on, dis: c.fav || (!on && F.mats.length >= need), note: c.fav ? '🔒 Favorito protegido' : '' })
         }).join('');
-        $('#fusN').textContent = `(${F.mats.length}/3 · ${RAR[base.rar].l})`;
+        $('#fusN').textContent = `(${F.mats.length}/${need} · ${RAR[base.rar].l})`;
         const up = upgrade(JSON.parse(JSON.stringify(base))), A = RAR[base.rar], Z = RAR[up.rar];
         const st = (l, k) => `<span>${l} ${base[k]} → <b>${up[k]}</b></span>`;
         const newMv = up.moves.filter((m, i) => m.n !== base.moves[i].n).map(m => m.n);
         const gone = F.mats.map(id => esc(chars.find(c => c.id === id).name));
         $('#fusPrev').innerHTML = `<div class="card" style="box-shadow:none"><b>${esc(base.name)}: ${A.s} ${A.l} → ${Z.s} ${Z.l}</b>
  <div class="st" style="margin:8px 0">${st('❤️ HP', 'hp')}${st('⚔️ Ataque', 'atk')}${st('🛡️ Defensa', 'def')}${st('💨 Velocidad', 'spd')}</div>
- <small class="muted">Ataques: poder +${Z.pw - A.pw} · precisión +${Z.ac - A.ac}%${newMv.length ? ` · nuevo ataque de tipo: ${newMv.join(', ')}` : ''}</small>
+ <small class="muted">Ataques: poder +${Z.pw - A.pw} · precisión +${Z.ac - A.ac}%${newMv.length ? ` · nuevo ataque de tipo: ${newMv.join(', ')}` : ''}${!base.ab && up.ab ? ' · ✨ obtendrá una habilidad pasiva aleatoria' : ''}</small>
  ${gone.length ? `<p class="muted" style="margin:6px 0 0">Se consumirán: <b>${gone.join(', ')}</b></p>` : ''}</div>`
       }
-      $('#fusOk').disabled = !(base && F.mats.length === 3)
+      $('#fusOk').disabled = !(base && F.mats.length === RAR[base.rar].m)
     }
     $('#fusb').onclick = () => { F = { base: null, mats: [] }; $('#fusMsg').textContent = ''; renderFus(); $('#fus').showModal() };
     $('#fusX').onclick = () => $('#fus').close();
     $('#fus').onclick = e => {
       const b = e.target.closest('.fi'); if (!b || b.disabled) return; const id = b.dataset.id;
       if (b.dataset.act === 'base') { F.base = F.base === id ? null : id; F.mats = [] }
-      else F.mats = F.mats.includes(id) ? F.mats.filter(x => x !== id) : F.mats.length < 3 ? [...F.mats, id] : F.mats;
+      else F.mats = F.mats.includes(id) ? F.mats.filter(x => x !== id) : F.mats.length < RAR[chars.find(c => c.id === F.base).rar].m ? [...F.mats, id] : F.mats;
       $('#fusMsg').textContent = ''; renderFus()
     };
     $('#fusOk').onclick = () => {
       const base = chars.find(c => c.id === F.base), mats = F.mats.map(id => chars.find(c => c.id === id));
       /* Validación final antes de consumir nada */
-      if (!base || !nextRar(base.rar) || mats.length !== 3 || mats.some(m => !m || !isMat(m, base))) { F.mats = []; renderFus(); return }
+      if (!base || !fusible(base.rar) || mats.length !== RAR[base.rar].m || mats.some(m => !m || !isMat(m, base))) { F.mats = []; renderFus(); return }
       const from = RAR[base.rar].l, gone = new Set(F.mats);
-      upgrade(base);
+      const hadAb = !!base.ab; upgrade(base); const gotAb = !hadAb && !!base.ab;
       chars = chars.filter(c => !gone.has(c.id)); /* los materiales se eliminan para siempre */
       if (gone.has(sel.p)) sel.p = null; if (gone.has(sel.c)) sel.c = null;
       save(); renderSel();
       F = { base: canBase(base) ? base.id : null, mats: [] }; renderFus();
-      $('#fusMsg').textContent = `✨ ¡${base.name} ascendió de ${from} a ${RAR[base.rar].l}!`
+      $('#fusMsg').textContent = `✨ ¡${base.name} ascendió de ${from} a ${RAR[base.rar].l}!${gotAb ? ` Habilidad pasiva: ${ABIL[base.ab].n}.` : ''}`
     };
 
     /* Confirmación de borrado */
